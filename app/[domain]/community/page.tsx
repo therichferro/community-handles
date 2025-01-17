@@ -9,12 +9,13 @@ import { Profile } from "@/components/profile"
 
 export const revalidate = 3600
 
-interface Props {
-  params: { domain: string }
+interface PageProps {
+  params: Promise<{ domain: string }>
 }
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const domain = params.domain
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const resolvedParams = await params;
+  const domain = resolvedParams.domain;
 
   return {
     title: `The ${domain} Community`,
@@ -24,8 +25,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const PAGE_SIZE = 100
 
-export default async function CommunityPage({ params }: Props) {
-  const domain = params.domain
+export default async function CommunityPage({ params }: PageProps) {
+  const resolvedParams = await params;
+  const domain = resolvedParams.domain;
 
   const [count, { profiles: initialProfiles, nextOffset }] = await Promise.all([
     prisma.user.count({
@@ -92,7 +94,6 @@ async function getUsers(domain: string, offset = 0) {
     }
   }
 
-  // fetch profiles in chunks of 25
   const chunks = []
   for (let i = 0; i < PAGE_SIZE; i += 25) {
     const chunk = users.slice(i, i + 25).map(({ did }) => did)
@@ -101,7 +102,6 @@ async function getUsers(domain: string, offset = 0) {
     }
   }
 
-  // jealous of postfix await :(
   const responses = await Promise.all(
     chunks.map((actors) => agent.getProfiles({ actors }))
   )
